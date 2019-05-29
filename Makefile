@@ -39,6 +39,11 @@ TRACE_ANALYSIS_SCANNED_DIRPATH := $(TRACE_ANALYSIS_DIRPATH)/scanned
 TRACE_ANALYSIS_COMBINED_DIRPATH := $(TRACE_ANALYSIS_DIRPATH)/combined
 TRACE_ANALYSIS_MERGED_DIRPATH := $(TRACE_ANALYSIS_DIRPATH)/merged
 TRACE_ANALYSIS_SUMMARIZED_DIRPATH := $(TRACE_ANALYSIS_DIRPATH)/summarized
+TRACE_ANALYSIS_VISUALIZED_DIRPATH := $(TRACE_ANALYSIS_DIRPATH)/visualized
+TRACE_ANALYSIS_LATEX_DIRPATH := $(TRACE_ANALYSIS_DIRPATH)/latex
+TRACE_ANALYSIS_LATEX_FILEPATH := $(TRACE_ANALYSIS_LATEX_DIRPATH)/macros.tex
+TRACE_ANALYSIS_REPORT_DIRPATH := $(TRACE_ANALYSIS_DIRPATH)/report
+TRACE_ANALYSIS_REPORT_FILEPATH := $(TRACE_ANALYSIS_REPORT_DIRPATH)/report.html
 TRACE_CORPUS_DIRPATH := $(TRACE_DIRPATH)/corpus
 TRACE_LOGS_DIRPATH := $(TRACE_DIRPATH)/logs
 TRACE_LOGS_RAW_DIRPATH := $(TRACE_LOGS_DIRPATH)/raw
@@ -48,6 +53,7 @@ TRACE_LOGS_SCANNED_DIRPATH := $(TRACE_LOGS_DIRPATH)/scanned
 TRACE_LOGS_COMBINED_DIRPATH := $(TRACE_LOGS_DIRPATH)/combined
 TRACE_LOGS_MERGED_DIRPATH := $(TRACE_LOGS_DIRPATH)/merged
 TRACE_LOGS_SUMMARIZED_DIRPATH := $(TRACE_LOGS_DIRPATH)/summarized
+TRACE_LOGS_REPORT_DIRPATH := $(TRACE_LOGS_DIRPATH)/report
 TRACE_LOGS_CORPUS_DIRPATH := $(TRACE_LOGS_DIRPATH)/corpus
 TRACE_LOGS_SUMMARY_DIRPATH := $(TRACE_LOGS_DIRPATH)/summary
 TRACE_LOGS_SUMMARY_RAW_DIRPATH := $(TRACE_LOGS_SUMMARY_DIRPATH)/raw
@@ -124,7 +130,7 @@ TRACE_ANALYSIS_SCRIPT_TYPE := --vignettes --examples --tests
 ################################################################################
 ## analysis arguments
 ################################################################################
-ANALYSIS := events
+ANALYSIS := dynamic_calls
 
 ################################################################################
 ## data table viewer arguments
@@ -305,6 +311,22 @@ summarize-analysis:
 	                                   2>&1 | $(TEE) $(TEE_FLAGS)                                    \
 	                                                 $(TRACE_LOGS_SUMMARIZED_DIRPATH)/$(ANALYSIS)
 
+report-analyses:
+	@mkdir -p $(TRACE_ANALYSIS_VISUALIZED_DIRPATH)
+	@mkdir -p $(TRACE_ANALYSIS_LATEX_DIRPATH)
+	@mkdir -p $(TRACE_LOGS_SUMMARY_DIRPATH)
+	@mkdir -p $(TRACE_LOGS_REPORT_DIRPATH)
+
+	@$(UNBUFFER) $(TIME) $(XVFB_RUN) $(R_DYNTRACE) $(R_DYNTRACE_FLAGS)                                          \
+	                                               --file=scripts/report.R                                      \
+	                                               --args $(TRACE_ANALYSIS_REPORT_FILEPATH)                     \
+	                                                      $(TRACE_ANALYSIS_SUMMARIZED_DIRPATH)                  \
+	                                                      $(TRACE_ANALYSIS_VISUALIZED_DIRPATH)                  \
+	                                                      $(TRACE_ANALYSIS_LATEX_FILEPATH)                      \
+	                                                      $(BINARY)                                             \
+	                                                      --compression-level=$(COMPRESSION_LEVEL)              \
+	                                               2>&1 | $(TEE) $(TEE_FLAGS)                                   \
+	                                                             $(TRACE_LOGS_REPORT_DIRPATH)/$(ANALYSIS)
 
 reduce-analyses:
 	$(MAKE) reduce-analysis TRACE_DIRPATH=$(TRACE_DIRPATH) PARALLEL_JOB_COUNT=$(PARALLEL_JOB_COUNT) BINARY=$(BINARY) COMPRESSION_LEVEL=$(COMPRESSION_LEVEL) ANALYSIS=function_definitions
@@ -323,15 +345,16 @@ summarize-analyses:
 
 
 .PHONY: trace                           \
-	      view-data-table                 \
-	      report                          \
-	      prescan-analysis                \
-	      reduce-analysis                 \
-	      combine-analysis                \
-	      merge-analysis                  \
-	      summarize-analysis              \
-	      reduce-analyses                 \
-	      scan-analyses                   \
-	      combine-analyses                \
-	      merge-analyses                  \
-	      summarize-analyses
+        view-data-table                 \
+        report                          \
+        prescan-analysis                \
+        reduce-analysis                 \
+        combine-analysis                \
+        merge-analysis                  \
+        summarize-analysis              \
+        reduce-analyses                 \
+        scan-analyses                   \
+        combine-analyses                \
+        merge-analyses                  \
+        summarize-analyses              \
+        report-analyses
