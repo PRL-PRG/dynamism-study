@@ -145,14 +145,56 @@ DATA_TABLE_VIEWER_ARGS :=
 LINT_FILEPATH := scripts/create-corpus-with-matching-patterns.R
 
 
-FUNCTION_DEFINITIONS_FILENAME := function_definitions_with_script
-
 export R_KEEP_PKG_SOURCE=1
 export R_ENABLE_JIT=0
 export R_COMPILE_PKGS=0
 export R_DISABLE_BYTECODE=1
 export OMP_NUM_THREADS=2
 export R_LIBS=$(PACKAGE_LIB_DIRPATH)
+
+
+define rsync-repository
+	rsync -rtlzv                                    \
+	      --include="*.tar.gz"                      \
+	      --include="PACKAGES*"                     \
+	      --exclude="*/*"                           \
+	      $(1)                                      \
+	      $(PACKAGE_CONTRIB_DIRPATH)                \
+	      2>&1 | $(TEE) $(TEE_FLAGS)                \
+	                    $(PACKAGE_LOG_DIRPATH)/$(2)
+endef
+
+
+mirror-repository:
+	@mkdir -p $(PACKAGE_CONTRIB_DIRPATH)
+	@mkdir -p $(PACKAGE_SRC_DIRPATH)
+	@mkdir -p $(PACKAGE_LOG_DIRPATH)
+
+	$(call rsync-repository,mirrors.nic.cz::CRAN/src/contrib/,cran.log)
+	$(call rsync-repository,master.bioconductor.org::release/bioc/src/contrib/,bioc.log)
+	$(call rsync-repository,master.bioconductor.org::release/data/annotation/src/contrib/,bioc-data-annotation.log)
+	$(call rsync-repository,master.bioconductor.org::release/data/experiment/src/contrib/,bioc-data-experiment.log)
+	$(call rsync-repository,master.bioconductor.org::release/workflows/src/contrib/,bioc-workflows.log)
+	find $(PACKAGE_CONTRIB_DIRPATH)/ -maxdepth 1 -type f -name "*.tar.gz" -execdir tar -xvf '{}' -C $(PACKAGE_SRC_DIRPATH) \;
+
+
+setup-repository:
+	@mkdir -p $(PACKAGE_SRC_DIRPATH)
+	@mkdir -p $(PACKAGE_LIB_DIRPATH)
+	@mkdir -p $(PACKAGE_LOG_DIRPATH)
+
+	@$(TIME) $(XVFB_RUN) $(R_DYNTRACE) $(R_DYNTRACE_FLAGS)                              \
+	                                   --file=scripts/repository.R                      \
+	                                   --args $(PACKAGE_SETUP_REPOSITORIES)             \
+	                                          --ncpus=$(PACKAGE_SETUP_NCPUS)            \
+	                                          --cran-mirror-url=$(CRAN_MIRROR_URL)      \
+	                                          --cran-lib-dirpath=$(PACKAGE_LIB_DIRPATH) \
+	                                          --cran-src-dirpath=$(PACKAGE_SRC_DIRPATH) \
+	                                          --cran-log-dirpath=$(PACKAGE_LOG_DIRPATH) \
+	                                          --bioc-lib-dirpath=$(PACKAGE_LIB_DIRPATH) \
+	                                          --bioc-src-dirpath=$(PACKAGE_SRC_DIRPATH) \
+	                                          --bioc-log-dirpath=$(PACKAGE_LOG_DIRPATH)
+
 
 define tracer =
 $(TIME) $(R_DYNTRACE) --slave                                                     \

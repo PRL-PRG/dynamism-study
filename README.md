@@ -19,6 +19,23 @@ $ sudo apt install xvfb unbuffer parallel expect
 
 ## Administration
 
+### Setup Repository
+
+The following commands download and install all R packages from CRAN and Bioconductor.
+
+```shell
+$ make setup-repository PACKAGE_SETUP_REPOSITORIES=--setup-cran PACKAGE_SETUP_NCPUS=4
+$ make setup-repository PACKAGE_SETUP_REPOSITORIES=--setup-bioc PACKAGE_SETUP_NCPUS=4
+```
+
+### Mirror Repository
+
+The following command creates a local mirror of CRAN and BIOCONDUCTOR and extracts sources from compressed package files.
+
+```shell
+$ make mirror-repository
+```
+
 The following commands execute the corresponding stages of the analysis pipeline.
 They have to be executed in order, intermediate stages read the result of their previous stage as input.
 
